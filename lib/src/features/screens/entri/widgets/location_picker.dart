@@ -22,6 +22,7 @@ class LocationPicker extends StatefulWidget {
 
 class _LocationPickerState extends State<LocationPicker> {
   final TextEditingController _locationController = TextEditingController();
+  final MapController _mapController = MapController();
   LatLng _pickedLocation = const LatLng(-7.741785, 112.797416);
   bool _isGettingLocation = false;
 
@@ -74,6 +75,9 @@ class _LocationPickerState extends State<LocationPicker> {
     setState(() => _pickedLocation = latLng);
     widget.onLocationSelected?.call(latLng);
 
+    // Auto-center the inline map to the picked location
+    _mapController.move(latLng, _mapController.camera.zoom);
+
     try {
       final placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
       if (mounted && placemarks.isNotEmpty) {
@@ -119,6 +123,7 @@ class _LocationPickerState extends State<LocationPicker> {
                   SizedBox(
                     height: 200,
                     child: FlutterMap(
+                      mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _pickedLocation,
                         initialZoom: 14.0,

@@ -27,6 +27,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   void _selectLocation(LatLng latLng) {
     setState(() => _selectedLocation = latLng);
+    _mapController.move(latLng, _mapController.camera.zoom);
     _getAddress();
   }
 

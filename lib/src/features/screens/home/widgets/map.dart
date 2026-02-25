@@ -58,6 +58,15 @@ class _ViewMapState extends State<ViewMap> {
       _allSurveys = surveys;
       _isLoading = false;
     });
+
+    // Auto-center to the latest survey point
+    if (surveys.isNotEmpty) {
+      final latest = surveys.first; // assume newest first from API
+      _mapController.move(
+        LatLng(latest.latitude, latest.longitude),
+        _mapController.camera.zoom,
+      );
+    }
   }
 
   List<Survei> get _filteredSurveys {
