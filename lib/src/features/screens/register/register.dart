@@ -6,13 +6,75 @@ import 'package:welangflood/src/common_widets/text/subtitle.dart';
 import 'package:welangflood/src/common_widets/transition/transition.dart';
 import 'package:welangflood/src/constants/color.dart';
 import 'package:welangflood/src/constants/text_string.dart';
-import 'package:welangflood/src/features/auth/auth0_config.dart';
+import 'package:welangflood/src/features/screens/home/home.dart';
 import 'package:welangflood/src/features/screens/login/login.dart';
 import 'package:welangflood/src/features/screens/register/widgets/alreadytext.dart';
+import 'package:welangflood/src/services/auth_service.dart';
 
-
-class Register extends StatelessWidget {
+class Register extends StatefulWidget {
   const Register({Key? key}) : super(key: key);
+
+  @override
+  State<Register> createState() => _RegisterState();
+}
+
+class _RegisterState extends State<Register> {
+  final _nameController     = TextEditingController();
+  final _emailController    = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRegister() async {
+    final name     = _nameController.text.trim();
+    final email    = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Basic client-side validation
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Semua kolom harus diisi');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _errorMessage = 'Kata sandi minimal 6 karakter');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final result = await AuthService.register(
+      name: name,
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      // Registered & token saved — go straight to Home
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const Home()),
+        (route) => false,
+      );
+    } else {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = result.message;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,41 +93,68 @@ class Register extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: screenSize.height * 0.20),
-                        const Headline(
-                          text: tTitleRegister,
-                        ),
+                        const Headline(text: tTitleRegister),
 
                         SizedBox(height: screenSize.height * 0.01),
-                        const Subtitle(
-                          text: tSubtitleRegister,
-                        ),
+                        const Subtitle(text: tSubtitleRegister),
 
                         SizedBox(height: screenSize.height * 0.03),
+
+                        // Name field (new — required by backend)
                         OutlinedForm(
-                          labelText: 'welang@gmail.com',
-                          hintText: 'Email',
-                          controller: TextEditingController(),
+                          labelText: 'Nama Lengkap',
+                          hintText: 'Nama',
+                          controller: _nameController,
                           isRequired: true,
                           isValid: true,
                         ),
 
                         SizedBox(height: screenSize.height * 0.006),
+
+                        // Email field
+                        OutlinedForm(
+                          labelText: 'welang@gmail.com',
+                          hintText: 'Email',
+                          controller: _emailController,
+                          isRequired: true,
+                          isValid: true,
+                        ),
+
+                        SizedBox(height: screenSize.height * 0.006),
+
+                        // Password field
                         OutlinedForm(
                           labelText: 'Masukkan kata sandi',
-                          hintText: 'Kata Sandi ',
-                          controller: TextEditingController(),
+                          hintText: 'Kata Sandi',
+                          controller: _passwordController,
                           isRequired: true,
                           isValid: true,
                           icon: Icons.visibility,
                         ),
 
+                        SizedBox(height: screenSize.height * 0.02),
+
+                        // Error message
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ),
+
                         SizedBox(height: screenSize.height * 0.028),
+
+                        // Register button
                         CustomElevatedButton(
                           height: screenSize.height * 0.055,
-                          onPressed: () {
-                            loginWithAuth0(context);
-                          },
-                          text: tButtonRegister,
+                          onPressed: _isLoading ? () {} : _handleRegister,
+                          text: _isLoading ? 'Memuat...' : tButtonRegister,
                           foregroundColor: tTertiaryColor,
                           backgroundColor: tPrimaryColor,
                         ),
@@ -74,6 +163,7 @@ class Register extends StatelessWidget {
                   ),
                 ),
 
+                // Navigate to Login
                 CustomRichText(
                   onPressed: () {
                     TransitionUtils.navigateWithFadeTransition(context, const Login());
@@ -85,6 +175,15 @@ class Register extends StatelessWidget {
               ],
             ),
           ),
+
+          // Full-screen loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
         ],
       ),
     );

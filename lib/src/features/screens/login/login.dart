@@ -6,13 +6,64 @@ import 'package:welangflood/src/common_widets/text/subtitle.dart';
 import 'package:welangflood/src/common_widets/transition/transition.dart';
 import 'package:welangflood/src/constants/color.dart';
 import 'package:welangflood/src/constants/text_string.dart';
-import 'package:welangflood/src/features/auth/auth0_config.dart';
-import 'package:welangflood/src/features/screens/login/widgets/lupatext.dart';
+import 'package:welangflood/src/features/screens/home/home.dart';
 import 'package:welangflood/src/features/screens/register/register.dart';
 import 'package:welangflood/src/features/screens/register/widgets/alreadytext.dart';
+import 'package:welangflood/src/services/auth_service.dart';
 
-class Login extends StatelessWidget {
+class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
+
+  @override
+  State<Login> createState() => _LoginState();
+}
+
+class _LoginState extends State<Login> {
+  final _emailController    = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final email    = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Basic client-side validation
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Email dan kata sandi harus diisi');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final result = await AuthService.login(email: email, password: password);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      // Navigate to Home and remove all previous routes
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const Home()),
+        (route) => false,
+      );
+    } else {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = result.message;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,44 +82,57 @@ class Login extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: screenSize.height * 0.20),
-                        const Headline(
-                          text: tTitleLogin,
-                        ),
+                        const Headline(text: tTitleLogin),
 
                         SizedBox(height: screenSize.height * 0.01),
-                        const Subtitle(
-                          text: tSubtitleLogin,
-                        ),
+                        const Subtitle(text: tSubtitleLogin),
 
                         SizedBox(height: screenSize.height * 0.03),
+
+                        // Email field
                         OutlinedForm(
                           labelText: 'welang@gmail.com',
                           hintText: 'Email',
-                          controller: TextEditingController(),
+                          controller: _emailController,
                           isRequired: true,
                           isValid: true,
                         ),
 
                         SizedBox(height: screenSize.height * 0.006),
+
+                        // Password field
                         OutlinedForm(
                           labelText: 'Masukkan kata sandi',
-                          hintText: 'Kata Sandi ',
-                          controller: TextEditingController(),
+                          hintText: 'Kata Sandi',
+                          controller: _passwordController,
                           isRequired: true,
                           isValid: true,
                           icon: Icons.visibility,
                         ),
 
                         SizedBox(height: screenSize.height * 0.02),
-                        LupaKataSandiText(screenSize: screenSize),
+
+                        // Error message
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ),
 
                         SizedBox(height: screenSize.height * 0.028),
+
+                        // Login button
                         CustomElevatedButton(
                           height: screenSize.height * 0.055,
-                          onPressed: () {
-                            loginWithAuth0(context);
-                          },
-                          text: tButtonLogin,
+                          onPressed: _isLoading ? () {} : _handleLogin,
+                          text: _isLoading ? 'Memuat...' : tButtonLogin,
                           foregroundColor: tTertiaryColor,
                           backgroundColor: tPrimaryColor,
                         ),
@@ -77,6 +141,7 @@ class Login extends StatelessWidget {
                   ),
                 ),
 
+                // Navigate to Register
                 CustomRichText(
                   onPressed: () {
                     TransitionUtils.navigateWithFadeTransition(context, const Register());
@@ -88,6 +153,15 @@ class Login extends StatelessWidget {
               ],
             ),
           ),
+
+          // Full-screen loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
         ],
       ),
     );

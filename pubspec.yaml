@@ -44,7 +44,6 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   http: ^1.6.0
-  auth0_flutter: ^1.14.0
 
 dev_dependencies:
   flutter_test:
