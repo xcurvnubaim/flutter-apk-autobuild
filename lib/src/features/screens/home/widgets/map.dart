@@ -1,83 +1,133 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:welangflood/src/constants/color.dart';
+import 'package:welangflood/src/features/screens/entri/widgets/data_survei.dart';
+import 'package:welangflood/src/services/survey_service.dart';
 
 class ViewMap extends StatefulWidget {
-  const ViewMap({Key? key}) : super(key: key);
+  final String? startDate;
+  final String? endDate;
+
+  const ViewMap({Key? key, this.startDate, this.endDate}) : super(key: key);
 
   @override
-  _ViewMapState createState() => _ViewMapState();
+  State<ViewMap> createState() => _ViewMapState();
 }
 
 class _ViewMapState extends State<ViewMap> {
   final MapController _mapController = MapController();
+  List<Survei> _surveys = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  Color _getMarkerColor(double height) {
-    if (height < 10) {
-      return Colors.green;
-    } else if (height >= 10 && height < 20) {
-      return Colors.yellow.shade700;
-    } else if (height >= 20 && height < 30) {
-      return Colors.orange;
-    } else if (height >= 30 && height < 50) {
-      return Colors.deepOrange;
-    } else {
-      return Colors.red;
+  @override
+  void initState() {
+    super.initState();
+    _loadSurveys();
+  }
+
+  // Reload whenever date filter changes from parent
+  @override
+  void didUpdateWidget(ViewMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.startDate != widget.startDate || oldWidget.endDate != widget.endDate) {
+      _loadSurveys();
     }
   }
 
-  List<Map<String, dynamic>> _generateDummyData(int count) {
-    final Random random = Random();
-    List<Map<String, dynamic>> data = [];
-    List<String> petugasNames = ['John', 'Alice', 'Bob', 'Emma', 'Daniel', 'Sophia', 'Michael', 'Olivia'];
-    for (int i = 0; i < count; i++) {
-      double height = random.nextDouble() * 100;
-      String petugas = petugasNames[random.nextInt(petugasNames.length)];
-      LatLng position = LatLng(
-        -7.741785 + (random.nextDouble() - 0.5) / 10,
-        112.797416 + (random.nextDouble() - 0.5) / 10,
-      );
-      data.add({'height': height, 'petugas': petugas, 'position': position});
-    }
-    return data;
+  Future<void> _loadSurveys() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final surveys = await SurveyService.getSurveys(
+      start: widget.startDate,
+      end: widget.endDate,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _surveys = surveys;
+      _isLoading = false;
+    });
+  }
+
+  /// Color-code markers by flood height matching category ranges:
+  /// Cat 1: 0–10cm → green
+  /// Cat 2: 10–30cm → yellow
+  /// Cat 3: 30–50cm → orange
+  /// Cat 4: 50–100cm → deep orange
+  /// Cat 5: >100cm → red
+  Color _markerColor(double tinggi) {
+    if (tinggi < 10)  return Colors.green;
+    if (tinggi < 30)  return Colors.yellow.shade700;
+    if (tinggi < 50)  return Colors.orange;
+    if (tinggi < 100) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _categoryLabel(double tinggi) {
+    if (tinggi < 10)  return 'Kategori 1 (0–10 cm)';
+    if (tinggi < 30)  return 'Kategori 2 (10–30 cm)';
+    if (tinggi < 50)  return 'Kategori 3 (30–50 cm)';
+    if (tinggi < 100) return 'Kategori 4 (50–100 cm)';
+    return 'Kategori 5 (>100 cm)';
+  }
+
+  void _showSurveyDetail(BuildContext context, Survei survei) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          'Tinggi: ${survei.tinggi.toStringAsFixed(1)} cm',
+          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_categoryLabel(survei.tinggi),
+                style: TextStyle(color: _markerColor(survei.tinggi), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            if (survei.userName != null)
+              Text('Petugas: ${survei.userName}', style: const TextStyle(fontFamily: 'Inter')),
+            Text(
+              'Tanggal: ${survei.tanggalKejadian.toLocal().toString().split(' ')[0]}',
+              style: const TextStyle(fontFamily: 'Inter'),
+            ),
+            Text(
+              'Koordinat: ${survei.latitude.toStringAsFixed(5)}, ${survei.longitude.toStringAsFixed(5)}',
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: tSecondaryColor),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup', style: TextStyle(color: tPrimaryColor)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    List<Map<String, dynamic>> dummyData = _generateDummyData(5);
-
-    List<Marker> markers = dummyData.map((data) {
-      double height = data['height'];
-      LatLng position = data['position'];
-      String petugas = data['petugas'];
+    final markers = _surveys.map((survei) {
       return Marker(
-        point: position,
+        point: LatLng(survei.latitude, survei.longitude),
         width: 40,
         height: 40,
         child: GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Tinggi: ${height.toStringAsFixed(2)} cm'),
-                content: Text('Petugas: $petugas'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
-          },
+          onTap: () => _showSurveyDetail(context, survei),
           child: Icon(
             Icons.location_on,
-            color: _getMarkerColor(height),
+            color: _markerColor(survei.tinggi),
             size: 40,
           ),
         ),
@@ -86,13 +136,11 @@ class _ViewMapState extends State<ViewMap> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mapWidth = constraints.maxWidth > 0 ? constraints.maxWidth : screenWidth;
         final mapHeight = constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
             : screenHeight * 0.45;
 
         return Container(
-          width: mapWidth,
           height: mapHeight,
           decoration: BoxDecoration(
             border: Border.all(color: tPrimaryColor),
@@ -116,55 +164,91 @@ class _ViewMapState extends State<ViewMap> {
                     MarkerLayer(markers: markers),
                     RichAttributionWidget(
                       attributions: const [
-                        TextSourceAttribution(
-                          '© OpenStreetMap contributors',
-                        ),
+                        TextSourceAttribution('© OpenStreetMap contributors'),
                       ],
                     ),
                   ],
                 ),
+
+                // Loading overlay
+                if (_isLoading)
+                  Container(
+                    color: Colors.white.withOpacity(0.7),
+                    child: const Center(child: CircularProgressIndicator(color: tPrimaryColor)),
+                  ),
+
+                // Error overlay
+                if (!_isLoading && _errorMessage != null)
+                  Center(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
+                    ),
+                  ),
+
+                // Empty state
+                if (!_isLoading && _surveys.isEmpty && _errorMessage == null)
+                  const Center(
+                    child: Text(
+                      'Tidak ada data survei untuk periode ini',
+                      style: TextStyle(color: tSecondaryColor, fontFamily: 'Inter', fontSize: 13),
+                    ),
+                  ),
+
+                // Survey count badge
+                if (!_isLoading && _surveys.isNotEmpty)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: tPrimaryColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_surveys.length} titik banjir',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Refresh button
                 Positioned(
-                  top: 16.0,
-                  right: 16.0,
+                  bottom: 16,
+                  left: 16,
+                  child: FloatingActionButton.small(
+                    backgroundColor: tPrimaryColor,
+                    tooltip: 'Muat ulang',
+                    onPressed: _loadSurveys,
+                    child: const Icon(Icons.refresh, color: Colors.white),
+                  ),
+                ),
+
+                // Zoom controls
+                Positioned(
+                  top: 16,
+                  right: 16,
                   child: Column(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          color: tPrimaryColor,
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            final currentZoom = _mapController.camera.zoom;
-                            _mapController.move(
-                              _mapController.camera.center,
-                              currentZoom + 1,
-                            );
-                          },
-                          icon: const Icon(Icons.add, color: Colors.white),
-                        ),
-                      ),
-                      const SizedBox(height: 8.0),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          color: tPrimaryColor,
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            final currentZoom = _mapController.camera.zoom;
-                            _mapController.move(
-                              _mapController.camera.center,
-                              currentZoom - 1,
-                            );
-                          },
-                          icon: const Icon(Icons.remove, color: Colors.white),
-                        ),
-                      ),
+                      _zoomButton(Icons.add, () {
+                        _mapController.move(
+                          _mapController.camera.center,
+                          _mapController.camera.zoom + 1,
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                      _zoomButton(Icons.remove, () {
+                        _mapController.move(
+                          _mapController.camera.center,
+                          _mapController.camera.zoom - 1,
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -173,6 +257,21 @@ class _ViewMapState extends State<ViewMap> {
           ),
         );
       },
+    );
+  }
+
+  Widget _zoomButton(IconData icon, VoidCallback onTap) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: tPrimaryColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white),
+      ),
     );
   }
 }
