@@ -1,4 +1,4 @@
-package com.example.welangflood
+package com.itsflood
 
 import io.flutter.embedding.android.FlutterActivity
 
