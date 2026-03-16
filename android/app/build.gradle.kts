@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.welangflood"
+    namespace = "com.itsflood"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.welangflood"
+        applicationId = "com.itsflood"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -30,7 +30,7 @@ android {
         versionName = flutter.versionName
         manifestPlaceholders += mapOf(
             "auth0Domain" to "dev-2jllqhrcpo0w5k8i.us.auth0.com",
-            "auth0Scheme" to "com.example.welangflood"
+            "auth0Scheme" to "com.itsflood"
         )
     }
 
