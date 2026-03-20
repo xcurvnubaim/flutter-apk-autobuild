@@ -4,6 +4,8 @@
 <dict>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app needs access to your photo library to select photos for uploading.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take photos for uploading.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 	    <key>NSAllowsArbitraryLoads</key>
