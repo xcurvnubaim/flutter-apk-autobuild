@@ -189,7 +189,7 @@ class _ViewMapState extends State<ViewMap> {
 
                 if (!_isLoading && surveys.isEmpty)
                   const Center(
-                    child: Text('Tidak ada data survei untuk periode ini',
+                    child: Text('Tidak ada data laporan genangan untuk periode ini',
                         style: TextStyle(
                             color: tSecondaryColor, fontFamily: 'Inter', fontSize: 13)),
                   ),

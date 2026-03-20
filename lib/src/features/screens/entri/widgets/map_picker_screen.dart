@@ -63,7 +63,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Tentukan Lokasi Survei',
+            'Tentukan Lokasi Genangan',
             style: TextStyle(color: Colors.white, fontFamily: 'Inter'),
           ),
           backgroundColor: tPrimaryColor,
