@@ -44,7 +44,7 @@ class _EntriSurveiState extends State<EntriSurvei> {
       return;
     }
     if (_selectedLocation == null) {
-      setState(() => _errorMessage = 'Lokasi survei harus dipilih di peta');
+      setState(() => _errorMessage = 'Lokasi genangan harus dipilih di peta');
       return;
     }
 
@@ -63,7 +63,7 @@ class _EntriSurveiState extends State<EntriSurvei> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Data survei berhasil dikirim!'),
+          content: Text('Data laporan genangan berhasil dikirim!'),
           backgroundColor: Colors.green,
         ),
       );
