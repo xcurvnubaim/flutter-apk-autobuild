@@ -1,14 +1,17 @@
-name: Flutter APK Build
+name: Flutter APK Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 jobs:
   build:
-    name: Build Prod APK
+    name: Build & Release APK
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -28,13 +31,17 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Prod APK
-        # Clean production build name, still utilizing run_number for the versionCode
-        run: >
-          flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release
 
-      - name: Upload Prod APK
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: prod-apk-build-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          body: |
+            ## Release ${{ github.ref_name }}
+            Built from commit ${{ github.sha }}
+          files: build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
