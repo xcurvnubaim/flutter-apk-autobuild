@@ -37,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prod-apk-build-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-prod-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
