@@ -1,0 +1,41 @@
+name: Flutter APK Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Prod APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Prod APK
+        # Clean production build name, still utilizing run_number for the versionCode
+        run: >
+          flutter build apk 
+          --flavor prod 
+
+      - name: Upload Prod APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-apk-build-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-prod-release.apk
