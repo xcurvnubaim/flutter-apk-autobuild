@@ -20,29 +20,56 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final _emailController    = TextEditingController();
+  final _phoneController    = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _usePhoneLogin = false;
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  String _normalizePhoneNumber(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.isEmpty) {
+      return '';
+    }
+
+    var normalized = digitsOnly;
+    if (normalized.startsWith('0')) {
+      normalized = normalized.substring(1);
+    }
+    if (normalized.startsWith('62')) {
+      normalized = normalized.substring(2);
+    }
+
+    return normalized.isEmpty ? '' : '+62$normalized';
+  }
+
   Future<void> _handleLogin() async {
     final email    = _emailController.text.trim();
+    final phone    = _normalizePhoneNumber(_phoneController.text.trim());
     final password = _passwordController.text.trim();
+    final identifier = _usePhoneLogin ? phone : email;
+    final identifierLabel = _usePhoneLogin ? 'No. HP' : 'Email';
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Email dan kata sandi harus diisi');
+    if (identifier.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = '$identifierLabel dan kata sandi harus diisi');
       return;
     }
 
     setState(() { _isLoading = true; _errorMessage = null; });
 
-    final result = await AuthService.login(email: email, password: password);
+    final result = await AuthService.login(
+      email: _usePhoneLogin ? null : email,
+      phoneNumber: _usePhoneLogin ? phone : null,
+      password: password,
+    );
     if (!mounted) return;
 
     if (result.success) {
@@ -68,22 +95,128 @@ class _LoginState extends State<Login> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: screenSize.height * 0.20),
-                        const Headline(text: tTitleLogin),
-                        SizedBox(height: screenSize.height * 0.01),
-                        const Subtitle(text: tSubtitleLogin),
-                        SizedBox(height: screenSize.height * 0.03),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: screenSize.height * 0.20),
+                          const Headline(text: tTitleLogin),
+                          SizedBox(height: screenSize.height * 0.01),
+                          const Subtitle(text: tSubtitleLogin),
+                          SizedBox(height: screenSize.height * 0.03),
 
-                        OutlinedForm(
-                          labelText: 'welang@gmail.com',
-                          hintText: 'Email',
-                          controller: _emailController,
-                          isRequired: true,
-                          isValid: true,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _usePhoneLogin = false;
+                                    _phoneController.clear();
+                                    _errorMessage = null;
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _usePhoneLogin ? tPrimaryColor : tSecondaryColor,
+                                  ),
+                                  backgroundColor:
+                                      _usePhoneLogin ? Colors.transparent : tPrimaryColor.withValues(alpha: 0.08),
+                                ),
+                                child: Text(
+                                  'Email',
+                                  style: TextStyle(
+                                    color: _usePhoneLogin ? tPrimaryColor : tPrimaryColor,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _usePhoneLogin = true;
+                                    _emailController.clear();
+                                    _errorMessage = null;
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _usePhoneLogin ? tSecondaryColor : tPrimaryColor,
+                                  ),
+                                  backgroundColor:
+                                      _usePhoneLogin ? tPrimaryColor.withValues(alpha: 0.08) : Colors.transparent,
+                                ),
+                                child: Text(
+                                  'No. HP',
+                                  style: TextStyle(
+                                    color: _usePhoneLogin ? tPrimaryColor : tPrimaryColor,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        SizedBox(height: screenSize.height * 0.015),
+
+                        if (!_usePhoneLogin)
+                          OutlinedForm(
+                            labelText: 'welang@gmail.com',
+                            hintText: 'Email',
+                            controller: _emailController,
+                            isRequired: true,
+                            isValid: true,
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black38),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: tPrimaryColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    '+62',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: tPrimaryColor,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 1,
+                                  height: 24,
+                                  color: Colors.black26,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: const InputDecoration(
+                                      hintText: '81234567890',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         SizedBox(height: screenSize.height * 0.006),
                         OutlinedForm(
                           labelText: 'Masukkan kata sandi',
@@ -110,7 +243,8 @@ class _LoginState extends State<Login> {
                           foregroundColor: tTertiaryColor,
                           backgroundColor: tPrimaryColor,
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

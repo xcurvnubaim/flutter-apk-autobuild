@@ -21,7 +21,9 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   final _nameController     = TextEditingController();
   final _emailController    = TextEditingController();
+  final _phoneController    = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _usePhoneRegister = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -29,17 +31,38 @@ class _RegisterState extends State<Register> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  String _normalizePhoneNumber(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.isEmpty) {
+      return '';
+    }
+
+    var normalized = digitsOnly;
+    if (normalized.startsWith('0')) {
+      normalized = normalized.substring(1);
+    }
+    if (normalized.startsWith('62')) {
+      normalized = normalized.substring(2);
+    }
+
+    return normalized.isEmpty ? '' : '+62$normalized';
   }
 
   Future<void> _handleRegister() async {
     final name     = _nameController.text.trim();
     final email    = _emailController.text.trim();
+    final phone    = _normalizePhoneNumber(_phoneController.text.trim());
     final password = _passwordController.text.trim();
+    final identifier = _usePhoneRegister ? phone : email;
+    final identifierLabel = _usePhoneRegister ? 'No. HP' : 'Email';
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Semua kolom harus diisi');
+    if (name.isEmpty || identifier.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Nama, $identifierLabel, dan kata sandi harus diisi');
       return;
     }
     if (password.length < 6) {
@@ -49,7 +72,12 @@ class _RegisterState extends State<Register> {
 
     setState(() { _isLoading = true; _errorMessage = null; });
 
-    final result = await AuthService.register(name: name, email: email, password: password);
+    final result = await AuthService.register(
+      name: name,
+      email: _usePhoneRegister ? null : email,
+      phoneNumber: _usePhoneRegister ? phone : null,
+      password: password,
+    );
     if (!mounted) return;
 
     if (result.success) {
@@ -75,14 +103,16 @@ class _RegisterState extends State<Register> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: screenSize.height * 0.20),
-                        const Headline(text: tTitleRegister),
-                        SizedBox(height: screenSize.height * 0.01),
-                        const Subtitle(text: tSubtitleRegister),
-                        SizedBox(height: screenSize.height * 0.03),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: screenSize.height * 0.20),
+                          const Headline(text: tTitleRegister),
+                          SizedBox(height: screenSize.height * 0.01),
+                          const Subtitle(text: tSubtitleRegister),
+                          SizedBox(height: screenSize.height * 0.03),
 
                         OutlinedForm(
                           labelText: 'Nama Lengkap',
@@ -91,14 +121,117 @@ class _RegisterState extends State<Register> {
                           isRequired: true,
                           isValid: true,
                         ),
-                        SizedBox(height: screenSize.height * 0.006),
-                        OutlinedForm(
-                          labelText: 'welang@gmail.com',
-                          hintText: 'Email',
-                          controller: _emailController,
-                          isRequired: true,
-                          isValid: true,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _usePhoneRegister = false;
+                                    _phoneController.clear();
+                                    _errorMessage = null;
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _usePhoneRegister ? tPrimaryColor : tSecondaryColor,
+                                  ),
+                                  backgroundColor:
+                                      _usePhoneRegister ? Colors.transparent : tPrimaryColor.withValues(alpha: 0.08),
+                                ),
+                                child: const Text(
+                                  'Email',
+                                  style: TextStyle(
+                                    color: tPrimaryColor,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _usePhoneRegister = true;
+                                    _emailController.clear();
+                                    _errorMessage = null;
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _usePhoneRegister ? tSecondaryColor : tPrimaryColor,
+                                  ),
+                                  backgroundColor:
+                                      _usePhoneRegister ? tPrimaryColor.withValues(alpha: 0.08) : Colors.transparent,
+                                ),
+                                child: const Text(
+                                  'No. HP',
+                                  style: TextStyle(
+                                    color: tPrimaryColor,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        SizedBox(height: screenSize.height * 0.015),
+                        SizedBox(height: screenSize.height * 0.006),
+                        if (!_usePhoneRegister)
+                          OutlinedForm(
+                            labelText: 'welang@gmail.com',
+                            hintText: 'Email',
+                            controller: _emailController,
+                            isRequired: true,
+                            isValid: true,
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black38),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: tPrimaryColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    '+62',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: tPrimaryColor,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 1,
+                                  height: 24,
+                                  color: Colors.black26,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: const InputDecoration(
+                                      hintText: '81234567890',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         SizedBox(height: screenSize.height * 0.006),
                         OutlinedForm(
                           labelText: 'Masukkan kata sandi',
@@ -125,7 +258,8 @@ class _RegisterState extends State<Register> {
                           foregroundColor: tTertiaryColor,
                           backgroundColor: tPrimaryColor,
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

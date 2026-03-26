@@ -16,14 +16,19 @@ class AuthService {
 
   static Future<AuthResult> register({
     required String name,
-    required String email,
+    String? email,
+    String? phoneNumber,
     required String password,
   }) async {
-    final response = await ApiService.post(ApiConstants.register, {
+    final payload = <String, dynamic>{
       'name': name,
-      'email': email,
       'password': password,
-    });
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (phoneNumber != null && phoneNumber.trim().isNotEmpty)
+        'phone_number': phoneNumber.trim(),
+    };
+
+    final response = await ApiService.post(ApiConstants.register, payload);
 
     if (response['status'] == 'success') {
       final token = response['data']['token'] as String;
@@ -46,13 +51,18 @@ class AuthService {
   // -------------------------------------------------------
 
   static Future<AuthResult> login({
-    required String email,
+    String? email,
+    String? phoneNumber,
     required String password,
   }) async {
-    final response = await ApiService.post(ApiConstants.login, {
-      'email': email,
+    final payload = <String, dynamic>{
       'password': password,
-    });
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (phoneNumber != null && phoneNumber.trim().isNotEmpty)
+        'phone_number': phoneNumber.trim(),
+    };
+
+    final response = await ApiService.post(ApiConstants.login, payload);
 
     if (response['status'] == 'success') {
       final token = response['data']['token'] as String;
