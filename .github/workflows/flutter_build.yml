@@ -31,8 +31,7 @@ jobs:
       - name: Build Prod APK
         # Clean production build name, still utilizing run_number for the versionCode
         run: >
-          flutter build apk 
-          --flavor prod 
+          flutter build apk --release
 
       - name: Upload Prod APK
         uses: actions/upload-artifact@v4
